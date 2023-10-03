@@ -53,12 +53,12 @@ def request_screenplay_page(screenplay_body_container, screenplay_body_message):
     prev_page_addition = f"""
         Here is the last written page of this screenplay, your job is to write the next page of the screenplay
 
-        Last page of the screen play
+        The last page of the screen play is below:
         ...{last_page}...
 
         Remember if the last page ends in the middle of a sentence, start your response finishing that sentence.
 
-        Now using the given story outline and the previous written page, write the next page for this screenplay and use the story outline to first see where you are in the overall story. Analyze the story outline before generating the next page. See where which part of the hero's journey you're currently in before responding.
+        Now using the given story outline and the previous written page, you must write the next page for this screenplay and use the story outline to first see where you are in the overall story. Analyze the story outline before generating the next page. See where which part of the hero's journey you're currently in before responding.
 
         If you cover an entire story point in the outline, simply go to the next one. If you have reached the COMPLETE end of the story outline then finish with the tag "SCRIPT STORY END". If the story outline isn't completely finalized in your story, simply stop at the end of the current scene with the tag "SCRIPT MONKEY CONTINUE".
 
@@ -67,6 +67,8 @@ def request_screenplay_page(screenplay_body_container, screenplay_body_message):
 
     initial_page_addition = """
         Now using this story outline write the first page for a screenplay for this story outline. If you cover an entire story point in the outline, simply go to the next one.
+
+        Only respond with the screenplay page do not respond with any explanation or affirmative just the screenplay text
     """.strip()
     prompt = f"""
         Write me a well structured screenplay (use two or three new line characters in between dialogue exchanges and at the end of a scene) with scene descriptions and character dialogue for the following story outline. The story outline is broken down in Joseph Campbell's Hero's Journey story structure.
