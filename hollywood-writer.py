@@ -237,7 +237,7 @@ def request_story_outline(title, genre, setting, characters):
 
         except Exception as e:
             print(str(e))
-            return ""
+            return output
 
 
 def request_character_art(bio):
