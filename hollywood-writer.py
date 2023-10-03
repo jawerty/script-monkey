@@ -72,7 +72,7 @@ def request_screenplay_page(screenplay_body_container, screenplay_body_message):
         Write me a well structured screenplay (use two or three new line characters in between dialogue exchanges and at the end of a scene) with scene descriptions and character dialogue for the following story outline. The story outline is broken down in Joseph Campbell's Hero's Journey story structure.
 
         Here is the story outline:
-        {st.session_state['story_outline']}
+        {st.session_state.story_outline}
 
         {prev_page_addition if last_page else initial_page_addition}
     """.strip()
@@ -269,8 +269,6 @@ def request_character_art(bio):
 
 
 def generate_story_outline():
-    st.session_state['story_outline'] = None
-
     output = request_story_outline(
         st.session_state.title, 
         st.session_state.genre, 
@@ -288,7 +286,7 @@ def generate_story_outline():
 
 
 def goto_screenplay():
-    st.session_state.screenplay_writing_mode = True
+    st.session_state.screenplay_writing_mode = "True"
 
 
 def write_screenplay(screenplay_body_container, screenplay_body_message, screenplay_actions):
@@ -319,7 +317,7 @@ if 'story_outline' in st.session_state:
     story_outline = copy.deepcopy(st.session_state.story_outline)
 else:
     story_outline = None
-    
+
 if screenplay_writing_mode:
     tab1, tab2 = st.tabs(["Screenplay", "Story Outline"])
 
@@ -331,14 +329,14 @@ if screenplay_writing_mode:
         screenplay_body_container = tab1.empty()
 
         if 'screenplay' in st.session_state and st.session_state.screenplay:
-            screenplay_body_container.text(st.session_state['screenplay'])
+            screenplay_body_container.text(st.session_state.screenplay)
 
         if _write_screenplay:
             write_screenplay(screenplay_body_container, screenplay_body_message, screenplay_actions)
 
     with tab2:
         tab2.button("Re-generate the story outline", type="secondary", on_click=generate_story_outline)
-        tab2.write(st.session_state['story_outline'])
+        tab2.write(story_outline)
    
 else:
     # story outline page (before screenplay writing)
