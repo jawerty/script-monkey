@@ -11,9 +11,14 @@ import streamlit as st
 API_KEY = os.getenv('API_KEY')
 
 st.title('🍌 Script Monkey 🐒')
-
+st.markdown("Made With ❤️ By [jaredthecoder](https://www.youtube.com/@jaredthecoder)")
 
 body_message = st.empty()
+
+body_message.markdown("""
+    ### This is Script Monkey your Screenplay Writing Companion
+    First create your characters / genre / setting and at a click of a button generate your story.
+    """)
 body_actions = st.container()
 body_container = st.empty()
 
