@@ -207,7 +207,7 @@ def request_story_outline(title, genre, setting, characters):
     response_json = response.json()
     if response_json["status"] == "COMPLETED":
         body_message.markdown("## Here's Your Story Outline 🚀")
-        body_container.write(output)
+        body_container.write("".join(response_json["output"]["text"]))
         return "".join(response_json["output"]["text"])
 
     status_url = f"https://api.runpod.ai/v2/llama2-7b-chat/stream/{response_json['id']}"
