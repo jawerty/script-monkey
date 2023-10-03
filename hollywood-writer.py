@@ -18,10 +18,10 @@ body_actions = st.container()
 body_container = st.empty()
 
 st.session_state.screenplay = None
-with open('test_outline.txt', "r+") as f:
-    text = f.read()
-    print(text)
-st.session_state.story_outline = text
+# with open('test_outline.txt', "r+") as f:
+#     text = f.read()
+#     print(text)
+st.session_state.story_outline = None
 st.session_state.character_loading = False
 st.session_state.current_character_art = False
 st.session_state.current_character_name = None
@@ -274,8 +274,8 @@ def generate_story_outline():
         st.session_state.characters
     )
 
-    with open("./test_outline.txt", "w+") as f:
-        f.write(output)
+    # with open("./test_outline.txt", "w+") as f:
+    #     f.write(output)
 
     if output:
         st.session_state.story_outline = output
