@@ -287,13 +287,11 @@ def generate_story_outline():
     else:
         st.session_state.story_outline = None
 
-    st.experimental_rerun()
 
 def goto_screenplay():
     st.session_state.screenplay_writing_mode = True
 
-    st.experimental_rerun()
-    
+
 def write_screenplay(screenplay_body_container, screenplay_body_message, screenplay_actions):
     def page_writer():        
         output = request_screenplay_page(screenplay_body_container, screenplay_body_message)
