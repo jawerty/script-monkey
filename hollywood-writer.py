@@ -26,7 +26,6 @@ st.session_state.screenplay = None
 # with open('test_outline.txt', "r+") as f:
 #     text = f.read()
 #     print(text)
-st.session_state.story_outline = None
 st.session_state.character_loading = False
 st.session_state.current_character_art = False
 st.session_state.current_character_name = None
@@ -311,8 +310,17 @@ def write_screenplay(screenplay_body_container, screenplay_body_message, screenp
 
     page_writer()
 
+if 'screenplay_writing_mode' in st.session_state:
+    screenplay_writing_mode = copy.deepcopy(st.session_state.screenplay_writing_mode)
+else:
+    screenplay_writing_mode = None
 
-if 'screenplay_writing_mode' in st.session_state and st.session_state['screenplay_writing_mode']:
+if 'story_outline' in st.session_state:
+    story_outline = copy.deepcopy(st.session_state.story_outline)
+else:
+    story_outline = None
+    
+if screenplay_writing_mode:
     tab1, tab2 = st.tabs(["Screenplay", "Story Outline"])
 
     with tab1:
@@ -334,7 +342,7 @@ if 'screenplay_writing_mode' in st.session_state and st.session_state['screenpla
    
 else:
     # story outline page (before screenplay writing)
-    if 'story_outline' in st.session_state and st.session_state['story_outline']:
+    if story_outline:
         col1, col2 = st.columns([1,1])
 
         with col1:
@@ -345,7 +353,7 @@ else:
             if _goto_screenplay:
                 goto_screenplay()
 
-        body_container.write(st.session_state['story_outline'])
+        body_container.write(story_outline)
 
 if 'characters' in st.session_state:
     characters = copy.deepcopy(st.session_state.characters)
