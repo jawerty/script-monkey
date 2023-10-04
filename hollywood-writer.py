@@ -36,7 +36,7 @@ st.session_state.title = None
 st.session_state.genre = None
 st.session_state.setting = None
 
-def request_screenplay_page(screenplay_body_container, screenplay_body_message):
+def request_screenplay_page(screenplay_body_container, screenplay_body_message, current_screenplay):
     print("Next page")
     url = f"https://api.runpod.ai/v2/llama2-7b-chat/runsync"
 
@@ -46,8 +46,8 @@ def request_screenplay_page(screenplay_body_container, screenplay_body_message):
     }
 
     last_page = None
-    if 'screenplay' in st.session_state and st.session_state.screenplay and len(st.session_state.screenplay) > 0:
-        last_page = st.session_state.screenplay.split(" ")[-500:]
+    if current_screenplay and len(current_screenplay) > 0:
+        last_page = current_screenplay.split(" ")[-500:]
         last_page = " ".join(last_page)
 
     prev_page_addition = f"""
@@ -94,8 +94,6 @@ def request_screenplay_page(screenplay_body_container, screenplay_body_message):
     start_time = time.time()
     response = requests.post(url, headers=headers, json=payload)
     print(response.text)
-
-
 
     if 'screenplay' in st.session_state and st.session_state.screenplay and len(st.session_state.screenplay) > 0:
         output = st.session_state.screenplay
@@ -292,8 +290,8 @@ def goto_screenplay():
 
 
 def write_screenplay(screenplay_body_container, screenplay_body_message, screenplay_actions):
-    def page_writer():        
-        output = request_screenplay_page(screenplay_body_container, screenplay_body_message)
+    def page_writer(current_screenplay):  
+        output = request_screenplay_page(screenplay_body_container, screenplay_body_message, current_screenplay)
 
         st.session_state.screenplay = output
         if 'SCRIPT MONKEY END' in output:
@@ -306,9 +304,9 @@ def write_screenplay(screenplay_body_container, screenplay_body_message, screenp
                 mime='text/markdown')
         else:
             output = "".join(output.split("SCRIPT MONKEY CONTINUE"))
-            return page_writer()
+            return page_writer(output)
 
-    page_writer()
+    page_writer("")
 
 if 'screenplay_writing_mode' in st.session_state:
     screenplay_writing_mode = copy.deepcopy(st.session_state.screenplay_writing_mode)
