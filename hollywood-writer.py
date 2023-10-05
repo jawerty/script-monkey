@@ -107,7 +107,7 @@ def request_screenplay_page(screenplay_body_container, screenplay_body_message):
 
     if last_page:
         if ('screenplay' in st.session_state) and st.session_state.screenplay and len(st.session_state.screenplay) > 0:
-            output = st.session_state.screenplay
+            output = st.session_state.screenplay + "\n\n"
         else:
             output = ""
     else:
