@@ -4,7 +4,7 @@ from PIL import Image
 import copy
 
 # import pathlib
-# from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup
 # import logging
 # import shutil
 
