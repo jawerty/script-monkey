@@ -10,6 +10,7 @@ import streamlit as st
 # load_dotenv()
 API_KEY = os.getenv('API_KEY')
 
+
 st.title('🍌 Script Monkey 🐒')
 st.markdown("Made With ❤️ By [jaredthecoder](https://www.youtube.com/@jaredthecoder)")
 
@@ -36,9 +37,9 @@ st.session_state.title = None
 st.session_state.genre = None
 st.session_state.setting = None
 
-def request_screenplay_page(screenplay_body_container, screenplay_body_message, current_screenplay):
+def request_screenplay_page(screenplay_body_container, screenplay_body_message):
     print("Next page")
-    url = f"https://api.runpod.ai/v2/llama2-7b-chat/runsync"
+    url = f"https://api.runpod.ai/v2/llama2-13b-chat/runsync"
 
     headers = {
       "Authorization": API_KEY,
@@ -46,46 +47,55 @@ def request_screenplay_page(screenplay_body_container, screenplay_body_message, 
     }
 
     last_page = None
-    if current_screenplay and len(current_screenplay) > 0:
-        last_page = current_screenplay.split(" ")[-500:]
-        last_page = " ".join(last_page)
+    if ('screenplay' in st.session_state) and st.session_state.screenplay and len(st.session_state.screenplay) > 0:
+        last_page = st.session_state.screenplay[-250:]
+
+    if last_page:
+        print("Last page", len(last_page))
+    else:
+        print("Last page", 0)
 
     prev_page_addition = f"""
-        Here is the last written page of this screenplay, your job is to write the next page of the screenplay
+        Here is the previous written page of this screenplay, your job is to write the next page of the screenplay
 
-        The last page of the screen play is below:
+        Here's the previous page of the screenplay:
         ...{last_page}...
 
-        Remember if the last page ends in the middle of a sentence, start your response finishing that sentence.
-
-        Now using the given story outline and the previous written page, you must write the next page for this screenplay and use the story outline to first see where you are in the overall story. Analyze the story outline before generating the next page. See where which part of the hero's journey you're currently in before responding.
-
-        If you cover an entire story point in the outline, simply go to the next one. If you have reached the COMPLETE end of the story outline then finish with the tag "SCRIPT STORY END". If the story outline isn't completely finalized in your story, simply stop at the end of the current scene with the tag "SCRIPT MONKEY CONTINUE".
-
-        Only respond with the screenplay do not respond with any explanation or affirmative just the continuing screenplay
+        You must follow the instructions below:
+        - Remember if the previous page ends in the middle of a sentence, start your response finishing that sentence.
+        - Now using the given story outline and the previous written page, you must ONLY write the next page for this screenplay and use the story outline to first see where you are in the overall story. Analyze the story outline before generating the next page. See where which part of the hero's journey you're currently in before responding.
+        - If you cover an entire story point in the outline, simply go to the next one. If you have reached the COMPLETE end of the story outline then finish with the tag "SCRIPT MONKEY END". If the story outline isn't completely finalized in your story, simply stop at the end of the current scene with the tag "SCRIPT MONKEY CONTINUE".
+        - Only respond with the screenplay text for the NEXT PAGE. DO NOT respond with anything other than the next page of the screenplay. Do not respond with any explanation or statement before your screenplay response, ONLY respond with the next screenplay page continuing the previous page
+        - I repeat, do not reply with anything like "of course I'll help yada yada" only reply with the screenplay text.
     """.strip()
 
     initial_page_addition = """
         Now using this story outline write the first page for a screenplay for this story outline. If you cover an entire story point in the outline, simply go to the next one.
 
-        Only respond with the screenplay page do not respond with any explanation or affirmative just the screenplay text
+        Only respond with the screenplay page do not respond with any explanation or affirmative just the screenplay text. Do not respond with any instructions to tell the user ONLY the first page of the screenplay.
     """.strip()
+
     prompt = f"""
+        [INST]
+        <<SYS>>
         Write me a well structured screenplay (use two or three new line characters in between dialogue exchanges and at the end of a scene) with scene descriptions and character dialogue for the following story outline. The story outline is broken down in Joseph Campbell's Hero's Journey story structure.
 
         Here is the story outline:
         {st.session_state.story_outline}
 
         {prev_page_addition if last_page else initial_page_addition}
+        <</SYS>>
+        [/INST]
     """.strip()
 
+    print("\n\n\n\n--------PROMPT--------\n\n\n\n", prompt, "\n\n\n\n")
     payload = {
       "input": {
         "prompt": prompt,
         "sampling_params": {
-          "max_tokens": 2000,
+          "max_tokens": 4000,
           "n": 1,
-          "frequency_penalty": 0.1,
+          "frequency_penalty": 0.01,
           "temperature": 0.75,
         }
       }
@@ -95,8 +105,11 @@ def request_screenplay_page(screenplay_body_container, screenplay_body_message, 
     response = requests.post(url, headers=headers, json=payload)
     print(response.text)
 
-    if 'screenplay' in st.session_state and st.session_state.screenplay and len(st.session_state.screenplay) > 0:
-        output = st.session_state.screenplay
+    if last_page:
+        if ('screenplay' in st.session_state) and st.session_state.screenplay and len(st.session_state.screenplay) > 0:
+            output = st.session_state.screenplay
+        else:
+            output = ""
     else:
         output = ""
 
@@ -106,7 +119,7 @@ def request_screenplay_page(screenplay_body_container, screenplay_body_message, 
         screenplay_body_container.text("\n".join(output.split("\n")))
         return output
 
-    status_url = f"https://api.runpod.ai/v2/llama2-7b-chat/stream/{response_json['id']}"
+    status_url = f"https://api.runpod.ai/v2/llama2-13b-chat/stream/{response_json['id']}"
 
     while True:
         time.sleep(.5)
@@ -117,15 +130,17 @@ def request_screenplay_page(screenplay_body_container, screenplay_body_message, 
                 for stream in get_status_json["stream"]:
                     next_tokens = "".join(stream["output"]["text"])
                     output += next_tokens
-                    screenplay_body_container.text("\n".join(output.split("\n")))
-                    print(next_tokens)
+                    screenplay_body_container.text(output)
+                    # print(next_tokens)
             
             if get_status_json["status"] == "IN_PROGRESS":
                 continue
             else:
                 end_time = time.time()
+                print(get_status_json)
                 print("Text generation time:", (end_time - start_time)/60)
                 screenplay_body_message.markdown("## Screenplay is generating...")
+                output += "".join(response_json["output"]["text"])
                 return output
 
         except Exception as e:
@@ -134,7 +149,7 @@ def request_screenplay_page(screenplay_body_container, screenplay_body_message, 
 
 
 def request_story_outline(title, genre, setting, characters):
-    url = f"https://api.runpod.ai/v2/llama2-7b-chat/runsync"
+    url = f"https://api.runpod.ai/v2/llama2-13b-chat/runsync"
 
     headers = {
       "Authorization": API_KEY,
@@ -149,6 +164,8 @@ def request_story_outline(title, genre, setting, characters):
             \n""".strip()
 
     prompt = f"""
+        [INST]
+        <<SYS>>
         Write me an story outline with the following format/info from beginning to end
         
         Your story MUST include these characters described below
@@ -186,6 +203,8 @@ def request_story_outline(title, genre, setting, characters):
         Remember each of these story points are metaphorical in name, utilize the MEANING of the story point when writing out your story point.
 
         Finally, when you write this story outline make the story captivating and exciting.
+        [/INST]
+        <</SYS>>
     """.strip()
 
     payload = {
@@ -209,7 +228,7 @@ def request_story_outline(title, genre, setting, characters):
         body_container.write("".join(response_json["output"]["text"]))
         return "".join(response_json["output"]["text"])
 
-    status_url = f"https://api.runpod.ai/v2/llama2-7b-chat/stream/{response_json['id']}"
+    status_url = f"https://api.runpod.ai/v2/llama2-13b-chat/stream/{response_json['id']}"
 
     output = ""
     body_message.markdown("## Generating Your Story Outline...")
@@ -244,7 +263,7 @@ def request_character_art(bio):
 
     payload = { 
         "input": {
-            "prompt": f"Portrait, white background, the character description is {bio}",
+            "prompt": f"Portrait, white background, highly detailed, the character description is {bio}",
             "height": 256,
             "width": 256,
             "num_outputs": 1,
@@ -261,8 +280,8 @@ def request_character_art(bio):
     }
 
     response = requests.post(url, json=payload, headers=headers)
+    print(response)
     print(response.text)
-    
     art_image = response.json()["output"][0]["image"]
     
     return art_image
@@ -290,23 +309,28 @@ def goto_screenplay():
 
 
 def write_screenplay(screenplay_body_container, screenplay_body_message, screenplay_actions):
-    def page_writer(current_screenplay):  
-        output = request_screenplay_page(screenplay_body_container, screenplay_body_message, current_screenplay)
+    loaded_download = False
+    def page_writer(loaded_download): 
+        output = request_screenplay_page(screenplay_body_container, screenplay_body_message)
 
         st.session_state.screenplay = output
-        if 'SCRIPT MONKEY END' in output:
-            output = "".join(output.split("SCRIPT MONKEY END"))
-            screenplay_body_message.markdown("## 🍌 Screenplay Finished! 🍌")
+        if len(output) > 0 and not loaded_download:
             screenplay_actions.download_button(
                 label="Download Screenplay (.md)",
                 data=st.session_state.screenplay,
                 file_name='screenplay.md',
                 mime='text/markdown')
+            loaded_download = True
+        if 'SCRIPT MONKEY END' in output:
+            output = "".join(output.split("SCRIPT MONKEY END"))
+            screenplay_body_message.markdown("## 🍌 Screenplay Finished! 🍌")
+            
         else:
+            screenplay_body_message.markdown("## 🍌 Screenplay generating...")
             output = "".join(output.split("SCRIPT MONKEY CONTINUE"))
-            return page_writer(output)
+            return page_writer(loaded_download)
 
-    page_writer("")
+    page_writer(loaded_download)
 
 if 'screenplay_writing_mode' in st.session_state:
     screenplay_writing_mode = copy.deepcopy(st.session_state.screenplay_writing_mode)
@@ -323,7 +347,7 @@ if screenplay_writing_mode:
 
     with tab1:
         _write_screenplay = tab1.button("Generate New Screenplay", type="primary")
-        
+
         screenplay_body_message = tab1.empty()
         screenplay_actions = tab1.container()
         screenplay_body_container = tab1.empty()
