@@ -3,11 +3,51 @@ import time
 from PIL import Image
 import copy
 
+import pathlib
+from bs4 import BeautifulSoup
+import logging
+import shutil
+
 import requests
 import streamlit as st
 # from dotenv import load_dotenv
 
 # load_dotenv()
+
+def inject_ga():
+    print("Loading GA")
+    GA_ID = "google_analytics"
+
+    # Note: Please replace the id from G-XXXXXXXXXX to whatever your
+    # web application's id is. You will find this in your Google Analytics account
+    
+    GA_JS = """
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-9YZ66QKT7R"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-9YZ66QKT7R');
+    </script>
+    """
+
+    # Insert the script in the head tag of the static template inside your virtual
+    index_path = pathlib.Path(st.__file__).parent / "static" / "index.html"
+    print(f'editing {index_path}')
+    print(index_path.read_text())
+    soup = BeautifulSoup(index_path.read_text(), features="html.parser")
+    if not soup.find(id=GA_ID):  # if cannot find tag
+        bck_index = index_path.with_suffix('.bck')
+        if bck_index.exists():
+            shutil.copy(bck_index, index_path)  # recover from backup
+        else:
+            shutil.copy(index_path, bck_index)  # keep a backup
+        html = str(soup)
+        new_html = html.replace('<head>', '<head>\n' + GA_JS)
+        index_path.write_text(new_html)
+
 API_KEY = os.getenv('API_KEY')
 
 
@@ -479,3 +519,7 @@ with st.sidebar:
 
     st.markdown("*note: Story outline generation may take a minute or two*")
     st.button("Generate", type="primary", on_click=generate_story_outline)
+
+
+
+inject_ga()
