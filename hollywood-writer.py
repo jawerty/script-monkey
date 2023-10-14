@@ -632,7 +632,7 @@ with st.sidebar:
         help="Write a short summary of the story and characters you want this script to be about",
         placeholder="Enter in your story summary")
 
-    st.session_state.use_storyboard = st.toggle("## Add Storyboarding (optional)", help="Generate Art for each page")
+    st.session_state.use_storyboard = st.toggle("## Add Storyboarding (optional)", help="Generate storyboard art for each page")
 
     st.divider()
 
