@@ -8,3 +8,12 @@ I built this during [this](https://www.youtube.com/watch?v=ACHVQVdXBs8) livestre
 
 # Try it out here
 [https://script-monkey.streamlit.app/](https://script-monkey.streamlit.app/)
+
+# Features
+- Add Characters
+	- Generate character art
+- Add Setting
+- Add Genre
+- Use a short story summary for generation (optional)
+- Storyboarding (new)
+	- (optional) Generate storyboard images with each script page

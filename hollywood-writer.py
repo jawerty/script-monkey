@@ -14,40 +14,6 @@ import streamlit as st
 
 # load_dotenv()
 
-# def inject_ga():
-#     print("Loading GA")
-#     GA_ID = "google_analytics"
-
-#     # Note: Please replace the id from G-XXXXXXXXXX to whatever your
-#     # web application's id is. You will find this in your Google Analytics account
-    
-#     GA_JS = """
-#     <!-- Google tag (gtag.js) -->
-#     <script async src="https://www.googletagmanager.com/gtag/js?id=G-9YZ66QKT7R"></script>
-#     <script>
-#       window.dataLayer = window.dataLayer || [];
-#       function gtag(){dataLayer.push(arguments);}
-#       gtag('js', new Date());
-
-#       gtag('config', 'G-9YZ66QKT7R');
-#     </script>
-#     """
-
-#     # Insert the script in the head tag of the static template inside your virtual
-#     index_path = pathlib.Path(st.__file__).parent / "static" / "index.html"
-#     print(f'editing {index_path}')
-#     print(index_path.read_text())
-#     soup = BeautifulSoup(index_path.read_text(), features="html.parser")
-#     if not soup.find(id=GA_ID):  # if cannot find tag
-#         bck_index = index_path.with_suffix('.bck')
-#         if bck_index.exists():
-#             shutil.copy(bck_index, index_path)  # recover from backup
-#         else:
-#             shutil.copy(index_path, bck_index)  # keep a backup
-#         html = str(soup)
-#         new_html = html.replace('<head>', '<head>\n' + GA_JS)
-#         index_path.write_text(new_html)
-
 API_KEY = os.getenv('API_KEY')
 
 
@@ -59,7 +25,7 @@ body_message = st.empty()
 body_message.markdown("""
     ### This is Script Monkey: Your Personal Hollywood Screenwriter
     First create your characters / genre / setting and at a click of a button generate your story.
-    """)
+""")
 body_actions = st.container()
 body_container = st.empty()
 
@@ -76,6 +42,7 @@ st.session_state.current_character_art = None
 st.session_state.title = None
 st.session_state.genre = None
 st.session_state.setting = None
+st.session_state.summary = None 
 
 def request_screenplay_page(screenplay_body_container, screenplay_body_message):
     print("Next page")
@@ -188,13 +155,14 @@ def request_screenplay_page(screenplay_body_container, screenplay_body_message):
             return ""
 
 
-def request_story_outline(title, genre, setting, characters):
+def request_story_outline(title, genre, setting, characters, summary):
     url = f"https://api.runpod.ai/v2/llama2-13b-chat/runsync"
 
     headers = {
       "Authorization": API_KEY,
       "Content-Type": "application/json"
     }
+
     character_descriptions = ""
 
     for i, character in enumerate(characters):
@@ -203,6 +171,7 @@ def request_story_outline(title, genre, setting, characters):
             Character #{i+1} bio: {character['bio']}
             \n""".strip()
 
+    story_summary = f"Your story MUST be this genre: {summary}\n" if summary else ""
     prompt = f"""
         [INST]
         <<SYS>>
@@ -211,6 +180,7 @@ def request_story_outline(title, genre, setting, characters):
         Your story MUST include these characters described below
         {character_descriptions}
         \n
+        {story_summary}
         Your story MUST be this genre: {genre}
 
         Your story MUST be in this setting: {setting}
@@ -297,6 +267,88 @@ def request_story_outline(title, genre, setting, characters):
             print(str(e))
             return output
 
+def generate_storyboard_prompt_from_page(page, characters):
+    url = f"https://api.runpod.ai/v2/llama2-13b-chat/runsync"
+
+    headers = {
+      "Authorization": API_KEY,
+      "Content-Type": "application/json"
+    }
+
+    character_descriptions = ""
+
+    for i, character in enumerate(characters):
+        character_descriptions += f"""
+            Character #{i+1} name: {character['name']}
+            Character #{i+1} bio: {character['bio']}
+            \n""".strip()
+
+    prompt = f"""
+        [INST]
+        <<SYS>>
+        You are a screenplay summarizing bot. Your role is to summarize screenplay pages in a short storyboard description.
+
+        You must follow the instructions below:
+        - First you must analyze the given characters and screenplay script page
+        - Then you must generate a brief summary of this page with a short (1 sentence) description of each character who speaks in the scene.
+        - Only respond with the brief summary of the scene and NOTHING ELSE!
+
+        Here are the characters in the screenplay:
+        {character_descriptions}
+
+        Here is the screenplay page:
+        {page}
+
+        Remember, only respond with the brief summary of the scene and NOTHING ELSE!
+        [/INST]
+        <</SYS>>
+    """.strip()
+
+    payload = {
+      "input": {
+        "prompt": prompt,
+        "sampling_params": {
+          "max_tokens": 2000,
+          "n": 1,
+          "frequency_penalty": 0.1,
+          "temperature": 0.75,
+        }
+      }
+    }
+
+    start_time = time.time()
+    response = requests.post(url, headers=headers, json=payload)
+    print(response.text)
+    response_json = response.json()
+    if response_json["status"] == "COMPLETED":
+        return "".join(response_json["output"]["text"])
+
+    status_url = f"https://api.runpod.ai/v2/llama2-13b-chat/stream/{response_json['id']}"
+
+    output = ""
+
+    while True:
+        time.sleep(.5)
+        try:
+            get_status = requests.get(status_url, headers=headers)
+            get_status_json = get_status.json()
+            if "stream" in get_status_json:
+                for stream in get_status_json["stream"]:
+                    next_tokens = "".join(stream["output"]["text"])
+                    output += next_tokens
+                    print(next_tokens)
+            
+            if get_status_json["status"] == "IN_PROGRESS":
+                continue
+            else:
+                end_time = time.time()
+                print("Text generation time:", (end_time - start_time)/60)
+                return output
+
+        except Exception as e:
+            print(str(e))
+            return output
+
 
 def request_character_art(bio):
     url = "https://api.runpod.ai/v2/sd-anything-v3/runsync"
@@ -326,13 +378,43 @@ def request_character_art(bio):
     
     return art_image
 
+def request_storyboard_art(storyboard_summary):
+    url = "https://api.runpod.ai/v2/sdxl/runsync"
+
+    payload = { 
+        "input": {
+            "prompt": "Highly detailed, photorealistic image of this scene:" + storyboard_summary,
+            "num_inference_steps": 100,
+            "refiner_inference_steps": 50,
+            "width": 512,
+            "height": 512,
+            "guidance_scale": 12,
+            "strength": 0.1,
+            "num_images": 1
+        } 
+
+    }
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "authorization": API_KEY
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+    print(response)
+    print(response.text)
+    storyboard_image = response.json()["output"]["image_url"]
+    
+    return storyboard_image
+
 
 def generate_story_outline():
     output = request_story_outline(
         st.session_state.title, 
         st.session_state.genre, 
         st.session_state.setting, 
-        st.session_state.characters
+        st.session_state.characters if 'characters' in st.session_state else [],
+        st.session_state.summary
     )
 
     # with open("./test_outline.txt", "w+") as f:
@@ -348,12 +430,27 @@ def goto_screenplay():
     st.session_state.screenplay_writing_mode = "True"
 
 
-def write_screenplay(screenplay_body_container, screenplay_body_message, screenplay_actions):
+def write_screenplay(screenplay_body_container, screenplay_body_message, screenplay_actions, use_storyboard, characters, storyboard_container):
     loaded_download = False
+    page_index = 0
     def page_writer(loaded_download): 
         output = request_screenplay_page(screenplay_body_container, screenplay_body_message)
-
         st.session_state.screenplay = output
+
+        page_split = output.split("SCRIPT MONKEY CONTINUE")
+        if len(page_split) >= page_index:
+            page = page_split[page_index]
+
+            storyboard_summary = generate_storyboard_prompt_from_page(page, characters)
+            if storyboard_summary:
+                print("-----storyboard summary-----", storyboard_summary)
+                try:
+                    storyboard_image = request_storyboard_art(storyboard_summary)
+                    storyboard_container.image(storyboard_image)
+                except Exception as e:
+                    print(str(e))
+
+        
         if len(output) > 0 and not loaded_download:
             screenplay_actions.download_button(
                 label="Download Screenplay (.md)",
@@ -372,6 +469,11 @@ def write_screenplay(screenplay_body_container, screenplay_body_message, screenp
 
     page_writer(loaded_download)
 
+if 'characters' in st.session_state:
+    characters = copy.deepcopy(st.session_state.characters)
+else:
+    characters = []
+
 if 'screenplay_writing_mode' in st.session_state:
     screenplay_writing_mode = copy.deepcopy(st.session_state.screenplay_writing_mode)
 else:
@@ -388,20 +490,32 @@ if screenplay_writing_mode:
     with tab1:
         _write_screenplay = tab1.button("Generate New Screenplay", type="primary")
 
-        screenplay_body_message = tab1.empty()
-        screenplay_actions = tab1.container()
-        screenplay_body_container = tab1.empty()
+        if st.session_state.use_storyboard:
+            col1, col2 = st.columns([1,1])
+            with col1:
+                screenplay_body_message = tab1.empty()
+                screenplay_actions = tab1.container()
+                screenplay_body_container = tab1.empty()
+                if 'screenplay' in st.session_state and st.session_state.screenplay:
+                    screenplay_body_container.text(st.session_state.screenplay)
+            with col2:
+                storyboard_container = tab1.container()
 
-        if 'screenplay' in st.session_state and st.session_state.screenplay:
-            screenplay_body_container.text(st.session_state.screenplay)
+        else:
+            screenplay_body_message = tab1.empty()
+            screenplay_actions = tab1.container()
+            screenplay_body_container = tab1.empty()
+            storyboard_container = None
+            if 'screenplay' in st.session_state and st.session_state.screenplay:
+                screenplay_body_container.text(st.session_state.screenplay)
 
         if _write_screenplay:
-            write_screenplay(screenplay_body_container, screenplay_body_message, screenplay_actions)
+            write_screenplay(screenplay_body_container, screenplay_body_message, screenplay_actions, st.session_state.use_storyboard, characters, storyboard_container)
 
     with tab2:
         tab2.button("Re-generate the story outline", type="secondary", on_click=generate_story_outline)
         tab2.write(story_outline)
-   
+
 else:
     # story outline page (before screenplay writing)
     if story_outline:
@@ -416,11 +530,6 @@ else:
                 goto_screenplay()
 
         body_container.write(story_outline)
-
-if 'characters' in st.session_state:
-    characters = copy.deepcopy(st.session_state.characters)
-else:
-    characters = []
 
 
 
@@ -514,12 +623,18 @@ with st.sidebar:
         "Setting", 
         label_visibility="collapsed", 
         placeholder="(e.g. Cyberpunk dystopian world)")
+    
+    st.markdown("## Use Your Own Story Summary (optional)")
+    st.session_state.summary = st.text_area(
+        "Your Story", 
+        label_visibility="collapsed", 
+        max_chars=500,
+        help="Write a short summary of the story and characters you want this script to be about",
+        placeholder="Enter in your story summary")
+
+    st.session_state.use_storyboard = st.toggle("## Add Storyboarding (optional)", help="Generate Art for each page")
 
     st.divider()
 
     st.markdown("*note: Story outline generation may take a minute or two*")
     st.button("Generate", type="primary", on_click=generate_story_outline)
-
-
-
-# inject_ga()
