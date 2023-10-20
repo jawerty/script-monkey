@@ -510,7 +510,7 @@ if screenplay_writing_mode:
                 screenplay_body_container.text(st.session_state.screenplay)
 
         if _write_screenplay:
-            write_screenplay(screenplay_body_container, screenplay_body_message, screenplay_actions, st.session_state.use_storyboard, characters, storyboard_container)
+            write_screenplay(screenplay_body_container, screenplay_body_message, screenplay_actions, st.session_state.use_storyboard if 'use_storyboard' in st.session_state else False, characters, storyboard_container)
 
     with tab2:
         tab2.button("Re-generate the story outline", type="secondary", on_click=generate_story_outline)
