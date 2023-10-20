@@ -374,6 +374,7 @@ def request_character_art(bio):
     response = requests.post(url, json=payload, headers=headers)
     print(response)
     print(response.text)
+
     art_image = response.json()["output"][0]["image"]
     
     return art_image
@@ -450,7 +451,6 @@ def write_screenplay(screenplay_body_container, screenplay_body_message, screenp
                 except Exception as e:
                     print(str(e))
 
-        
         if len(output) > 0 and not loaded_download:
             screenplay_actions.download_button(
                 label="Download Screenplay (.md)",
@@ -490,7 +490,7 @@ if screenplay_writing_mode:
     with tab1:
         _write_screenplay = tab1.button("Generate New Screenplay", type="primary")
 
-        if st.session_state.use_storyboard:
+        if 'use_storyboard' in st.session_state and st.session_state.use_storyboard:
             col1, col2 = st.columns([1,1])
             with col1:
                 screenplay_body_message = tab1.empty()
